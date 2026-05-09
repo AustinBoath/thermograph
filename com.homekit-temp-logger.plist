@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  macOS LaunchAgent — starts the temp logger automatically at login.
+
+  SETUP (after npm install):
+    1. Edit WorkingDirectory and ProgramArguments paths below
+       to match where you cloned this repo.
+    2. cp com.homekit-temp-logger.plist ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.homekit-temp-logger.plist
+
+  STOP:
+    launchctl unload ~/Library/LaunchAgents/com.homekit-temp-logger.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.homekit-temp-logger</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- EDIT THIS: path to your node binary (run: which node) -->
+    <string>/usr/local/bin/node</string>
+    <!-- EDIT THIS: full path to start.js -->
+    <string>/Users/YOUR_USERNAME/homekit-temp-logger/start.js</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <!-- EDIT THIS: full path to the project folder -->
+  <string>/Users/YOUR_USERNAME/homekit-temp-logger</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/homekit-temp-logger.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/homekit-temp-logger.err</string>
+</dict>
+</plist>
