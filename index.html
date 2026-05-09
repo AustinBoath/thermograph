@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Temperature</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+  <style>
+    :root {
+      --bg:       #0e0f11;
+      --panel:    #161719;
+      --border:   #2a2b2f;
+      --text:     #e8e9ea;
+      --muted:    #6b6f78;
+      --accent:   #4ade9f;
+      --accent2:  #38bdf8;
+      --warn:     #fb923c;
+      --red:      #f87171;
+      --mono:     'DM Mono', monospace;
+      --sans:     'DM Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      padding: 2rem 1.5rem 3rem;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    header h1 {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .live-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+      margin-left: auto;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ── Big temperature ── */
+    .hero {
+      margin-bottom: 2.5rem;
+    }
+    .hero-temp {
+      font-family: var(--mono);
+      font-size: clamp(4rem, 15vw, 7rem);
+      font-weight: 300;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      transition: color 0.6s ease;
+    }
+    .hero-temp .unit {
+      font-size: 0.4em;
+      color: var(--muted);
+      vertical-align: super;
+    }
+    .hero-meta {
+      margin-top: 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Stat cards ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .stat-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+    }
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+    }
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 1.4rem;
+      font-weight: 500;
+    }
+    .stat-value.min  { color: var(--accent2); }
+    .stat-value.max  { color: var(--red); }
+    .stat-value.avg  { color: var(--accent); }
+
+    /* ── Chart ── */
+    .chart-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+    .chart-title {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .range-btns {
+      display: flex;
+      gap: 0.4rem;
+    }
+    .range-btn {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 0.25rem 0.6rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .range-btn:hover, .range-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .chart-wrap { position: relative; height: 240px; }
+
+    /* ── Footer ── */
+    footer {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    footer span { color: var(--accent); }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>/ temperature</h1>
+    <span class="live-dot" title="Auto-updating"></span>
+  </header>
+
+  <div class="hero">
+    <div class="hero-temp" id="currentTemp">
+      —<span class="unit">°C</span>
+    </div>
+    <div class="hero-meta" id="heroMeta">waiting for data…</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">24h Min</div>
+      <div class="stat-value min" id="statMin">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">24h Max</div>
+      <div class="stat-value max" id="statMax">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">24h Avg</div>
+      <div class="stat-value avg" id="statAvg">—</div>
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <div class="chart-header">
+      <div class="chart-title">Temperature over time</div>
+      <div class="range-btns">
+        <button class="range-btn active" data-hours="6">6h</button>
+        <button class="range-btn" data-hours="12">12h</button>
+        <button class="range-btn" data-hours="24">24h</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="tempChart"></canvas>
+    </div>
+  </div>
+
+  <footer>
+    auto-refresh every <span>30s</span> · data stored locally · no cloud
+  </footer>
+
+<script>
+// ── Chart setup ──────────────────────────────────────────────────────────────
+const ctx = document.getElementById("tempChart").getContext("2d");
+
+const gradient = ctx.createLinearGradient(0, 0, 0, 240);
+gradient.addColorStop(0, "rgba(74, 222, 159, 0.25)");
+gradient.addColorStop(1, "rgba(74, 222, 159, 0.00)");
+
+const chart = new Chart(ctx, {
+  type: "line",
+  data: {
+    datasets: [{
+      label: "°C",
+      data: [],
+      borderColor: "#4ade9f",
+      borderWidth: 2,
+      backgroundColor: gradient,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      pointHoverBackgroundColor: "#4ade9f",
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    scales: {
+      x: {
+        type: "time",
+        time: { tooltipFormat: "HH:mm", displayFormats: { hour: "HH:mm", minute: "HH:mm" } },
+        grid: { color: "rgba(255,255,255,0.04)" },
+        ticks: { color: "#6b6f78", font: { family: "'DM Mono'", size: 11 }, maxTicksLimit: 8 }
+      },
+      y: {
+        grid: { color: "rgba(255,255,255,0.04)" },
+        ticks: {
+          color: "#6b6f78",
+          font: { family: "'DM Mono'", size: 11 },
+          callback: v => v.toFixed(1) + "°"
+        }
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#1e1f23",
+        borderColor: "#2a2b2f",
+        borderWidth: 1,
+        titleColor: "#6b6f78",
+        bodyColor: "#e8e9ea",
+        bodyFont: { family: "'DM Mono'" },
+        callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(2)}°C` }
+      }
+    }
+  }
+});
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentHours = 6;
+
+// ── Fetch & render ───────────────────────────────────────────────────────────
+async function refresh() {
+  try {
+    const [readingsRes, latestRes, statsRes] = await Promise.all([
+      fetch(`/api/readings?hours=${currentHours}`),
+      fetch("/api/latest"),
+      fetch("/api/stats")
+    ]);
+
+    const readings = await readingsRes.json();
+    const latest   = await latestRes.json();
+    const stats    = await statsRes.json();
+
+    // Hero temperature
+    if (latest.celsius != null) {
+      document.getElementById("currentTemp").innerHTML =
+        `${latest.celsius.toFixed(1)}<span class="unit">°C</span>`;
+
+      const ts = new Date(latest.timestamp);
+      document.getElementById("heroMeta").textContent =
+        `last reading · ${ts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
+      // Color shift for hot/cold
+      const el = document.getElementById("currentTemp");
+      if (latest.celsius >= 28)      el.style.color = "#f87171";
+      else if (latest.celsius <= 16) el.style.color = "#38bdf8";
+      else                           el.style.color = "#e8e9ea";
+    }
+
+    // Stats
+    if (stats.count > 0) {
+      document.getElementById("statMin").textContent = `${stats.min}°`;
+      document.getElementById("statMax").textContent = `${stats.max}°`;
+      document.getElementById("statAvg").textContent = `${stats.avg}°`;
+    }
+
+    // Chart
+    chart.data.datasets[0].data = readings.map(r => ({
+      x: new Date(r.timestamp),
+      y: r.celsius
+    }));
+    chart.update("none");
+
+  } catch (e) {
+    console.error("Refresh error:", e);
+  }
+}
+
+// ── Range buttons ─────────────────────────────────────────────────────────────
+document.querySelectorAll(".range-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".range-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentHours = parseInt(btn.dataset.hours);
+    refresh();
+  });
+});
+
+// ── Auto-refresh every 30s ────────────────────────────────────────────────────
+refresh();
+setInterval(refresh, 30_000);
+</script>
+</body>
+</html>
