@@ -33,7 +33,7 @@ You must also have **at least one HomeKit temperature accessory** set up in the 
 
 ```bash
 # 1. Clone and enter the project
-git clone https://github.com/YOUR_USERNAME/homekit-temp-logger.git
+git clone https://github.com/AustinBoath/homekit-temp-logger.git
 cd homekit-temp-logger
 
 # 2. Install Node dependencies
